@@ -1,0 +1,182 @@
+Encrypting data is not enough for outsourced storage Security
+
+As much as 80% of search queries can be infered by access patterns
+
+ORAMS: Allow a client to conceal its access pattern to the remote storage
+by continously shuffling and re-encrypting data as they are accessed. 
+-data constantly on the move whoooo can't catch me 
+
+
+This article proposed novel ORAM algorithm called Path ORAM. 
+
+Path ORAM uses O(B log N + log^2 N) bits of storage were B = Log N Bits 
+
+
+
+Core of the Path ORAM algorithm can be described injust 16 lines of pseudocode
+-no oblivious cuckoo hash table construction
+
+Each Path ORAM access is a simply fetch and storing of a path in a tree that is stored remotley on server.
+Small(constant time) cient-side storage. Very good chap
+
+
+Asymptotic efficency: it is very goodly wow such speed and space 
+
+
+Impact: Most practical and suitable algorithm due to its simplicity and small footprint
+
+
+Statistically secure
+
+
+Path ORAM promising solution to privacy-preserving storage outsourcing
+
+
+
+Problem Defintion:
+Consider a client that wishes to store data at a remote untrusted server
+while preservin privacy.
+
+Traditional encryption is confidential, but does not hide access patterns. 
+
+Assume client and its processor, memory, and disk are trusted and uncompromised
+
+Goal of ORAM is to obfscate and hide data access pattern(which blocks we read/write)
+frm the server. Data access pattern from two seqences of read/write operations with 
+the same legnth must be indistinguishable
+
+
+
+
+Notations:
+
+Assume client fetches/stores data on the server blocks of size B. Typical B is 64 to 256 KB.
+Secure processors are smaller 64B to 4KB blocks. 
+
+N is the working set, or number of distinct blocks
+
+
+Security Defintion: No leakage about
+1. Which data is being accessed
+2. How old it is
+3. Whether the same data is being accessed
+4. Access Pattern
+5. Whether the access is a read or a write
+
+
+Secure if given two sequences of queries, they are indistinguishable from each other
+pretty neat
+
+negl probability al of that jazz 
+
+
+
+
+
+Protocol: Non-Recursive Version
+
+
+Client stores small amount of local data in a stash
+Server-side storage is treated as a binary tree where each node is a bucket
+that can hold up to a fixed number of blocks
+
+Main Invariant: At any time, each block is mapped to a uniformly random leaf bucket
+in the tree, and unstashed blocks are always paced in some bucket along the path to the mapped leaf. 
+
+Whenever a leaf block is remapped to another leaf, and
+
+
+
+Server Storage:
+Data on server is tree of buckets as nodes. Does not need to binary tree, but is in our design
+
+
+Tree can be layed out as a flat array when stored on a disk 
+Height L, and 2^L leaves 
+
+any leaf node x defines a unique path frm x to the root. P(X) to denote the set of buckets along the path from x to the root
+
+P(x,l) denotes the bucket in P(x) at level l in the tree 
+
+Buckets:
+Each node is a bucket. Each bucket can contain up to Z real blocks.
+
+Each block is stored with address a of the block, and the leaf it is mapped to.
+    -3 tuple 
+    (a,x,data)
+
+
+If a bucket has fewer than Z real blocks, it is padded with dummy blocks.
+
+Buckets with less than Z real blocks should be padded 
+
+Storage = Z * 2^L blocks 
+
+
+Client Data Structures:
+
+Stash: During algorithm, small number of blocks might overflow from the tree buckets on the server.
+
+-Client locally stores these overflowing blocks in a local ds S called the stash 
+
+Position Map: The client stores a position map, such that x := position[a] means that block a is current mapped to the xth leaf tnde
+-also stored as metadata for each block in the binary tree on the server side 
+
+Bandwidth: For each load or store, client reads a path of Z log N blocks from the server
+and then writes them back, resulting in a total of 2Z log N block bandwith used per
+acess. Since Z is a constant, the bandwith usage is O(log N) blocks 
+
+
+Client Storage Size: Position Map is NL = N log N is
+
+
+
+Path ORAM initally:
+Stash is empty
+Server buckets contain random encryptions of the dummy block(no block on server)
+The clients position map is filled with inependent random numbers between 0 and 2^L - 1
+
+
+
+Path ORAM Reads and Writes 
+
+
+Access(op,a,data):
+# Remap Block: Randomly remap the position of block a to a new random position.
+# x denotes the blocks old position
+x = position[a]
+position[a] = x* = UnfiromRandoM(0...2^L-1)
+# Rea Path: Read the path P(x) containing block a. If client is doing Access a for 
+# the first time, it will not find block a in the tree or stash, and should Assume
+# that the block has a default value of zero.
+for l in range(L):
+    stash.append(ReadBucket(P(x,l)))
+data = read block a from S 
+#if the access is a write, update the data of block a
+if op == write:
+    replace existing stashed a data with new a data. Remember to use x*!!!)
+# Write the pack back and possibly include some additional blocks from the stash
+# if they fit into the path. Buckets are greedily filled with blocks in the stash
+# in a leaf to root order, ensuring blocks are pushed as deep down as possible.
+# A block a' mapped to x' can be placed in the bucket at level l only if the path P(x')
+# intersects the path accessed P(x) at level l, in other words if P(x,l) = P(x',l)
+for l = L to 0:
+    S'= access in s such that P(x,l) = P(x',l)? is that right
+    S'= Select min(|S'|, Z) blocks from S'
+    S' = S - S' 
+    WriteBucket(P(x,l),S')
+return data 
+
+
+ReadBucket(bucket): read all Z blocks and their metadata(including dummies) from server.
+Decrypt as read. 
+
+WriteBucket(bucket,blocks) the lcient writes the blocks with their metadata into the 
+specified bucket on the server. When writing, the client pads blocks with dmmy blocks to
+size Z!!!. All blocks are re-encrypted using randomized encryption schme(XChaCHa?)
+
+
+Notes Afterreading:
+I stopped after like page 12
+Not fully sure what happens in the last step
+Unclear to me how this works fully in practice but i see how to implement i think 
