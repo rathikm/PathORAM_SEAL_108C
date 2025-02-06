@@ -1,0 +1,4 @@
+path_oram/target/
+*.log
+*.swp
+*.rs.bk
