@@ -1,12 +1,12 @@
 #[derive(Clone, Debug, Copy)]
 pub struct Block<const N: usize> {
-    pub id: usize,
+    pub id: u64,
     pub data: [u8; N],
     pub dummy: bool,
 }
 
 impl <const N: usize> Block<N> {
-    pub fn new(id: usize, data: [u8; N], dummy: bool) -> Self {
+    pub fn new(id: u64, data: [u8; N], dummy: bool) -> Self {
         Self {id: id, data: data, dummy: dummy}
     }
 
