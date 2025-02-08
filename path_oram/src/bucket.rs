@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct Block<const N: usize> {
     pub id: u64,
     pub data: [u8; N],
@@ -15,7 +15,7 @@ impl <const N: usize> Block<N> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct Bucket<const Z: usize, const N: usize> {
     pub storage: [Block<N>; Z],
 }
