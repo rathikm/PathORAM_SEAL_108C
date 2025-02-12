@@ -19,23 +19,35 @@ pub struct Oram {
 }
 
 
-impl ORAM {
+impl Oram {
 
     // Create a new ORAM initalizing an empty stash and position map.
     // Tree is initalized to contain L buckets with dumy data in them 
     fn new() -> Self {
-        ORAM {
+        Oram {
             tree: Tree::new(),
             stash: Stash::new(),
             position_map: PosMap::new(),
         }
     }
-    fn access(&mut self, op: String, address: u32, data: Vec<u8>) -> i8 {
-        // Check if the address a is already in the position map. If it is, get the position
-        // Otherwise add it to the position map and get that value?
+    fn access(&mut self, op: String, address: u64, data: Vec<u8>) -> i8 {
 
+        //My attempt at making access in a readable manner. Not sure if this will work but I think readibility is important
 
+        // Line 1-3
+        let x = self.position_map.get(address);
+        let xStar = rand::thread_rng().gen_range(0..(1 << L));
+        self.position_map.set(address, xStar);
 
+        // Line 3-5
+        // for l in 0..=L {
+        //     let bucket_index = self.get_bucket_index(x, l);
+        //     for block in self.tree[bucket_index].blocks {
+        //         if block.valid {
+        //             self.stash.push(block.clone());
+        //         }
+        //     }
+        // }
 
         // let x = if let Some(&pos) = self.position_map.get(&address) {
         //     pos
