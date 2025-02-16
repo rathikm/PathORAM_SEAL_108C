@@ -1,17 +1,25 @@
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub struct Block<const N: usize> {
-    pub id: u64,
+    pub address: u64,
     pub data: [u8; N],
     pub dummy: bool,
 }
 
 impl <const N: usize> Block<N> {
-    pub fn new(id: u64, data: [u8; N], dummy: bool) -> Self {
-        Self {id: id, data: data, dummy: dummy}
+    pub fn new(address: u64, data: [u8; N], dummy: bool) -> Self {
+        Self {address: address, data: data, dummy: dummy}
     }
 
     pub fn empty() -> Self {
-        Self {id: 0, data: [0; N], dummy: true}
+        Self {address: 0, data: [0; N], dummy: true}
+    }
+
+    pub fn set_address(&mut self, address: u64) {
+        self.address = address;
+    }
+
+    pub fn set_data(&mut self, data: [u8; N]) {
+        self.data = data;
     }
 }
 
@@ -43,5 +51,9 @@ impl <const Z: usize, const N: usize> Bucket<Z, N> {
             }
         }
         real_blocks
+    }
+
+    pub fn write(&mut self, block: Block<N>, ind: usize) {
+        self.storage[ind] = block;
     }
 }

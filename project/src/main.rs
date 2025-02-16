@@ -1,6 +1,8 @@
+#![allow(warnings)]
 
-
+use Project::ORAM::ORAM;
 
 fn main() {
-    println!("Hello, world!");
+    let mut oram = ORAM::new();
+    oram.init();
 }

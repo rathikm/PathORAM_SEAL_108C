@@ -21,4 +21,17 @@ impl <const L: usize, const N: usize, const Z: usize> Tree <L, N, Z> {
         path.push(self.tree[0]);
         path
     }
+
+    pub fn calc_path_indices(&self, mut ind: usize) -> Vec<usize> {
+        let mut path: Vec<usize> = vec![];
+        while ind > 0 {
+            path.push(ind);
+            ind = (ind - 1) / 2;
+        }
+        path.push(0);
+        path
+    }
+    pub fn num_leaves(&self) -> usize {
+        1 << L
+    }
 }
