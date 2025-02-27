@@ -1,0 +1,204 @@
+Lecture on Wednesday will be Zoom
+-Lecture on TOR and anonymous communication from Kyle 
+
+
+Today:
+Oblivious DataStructures
+PathORAM extended to hardware enclaves
+SNOOPY 
+Obfuscura - black box transformation on dataset used with hardware enclaves
+
+
+
+Recap:
+
+Path-ORAM
+
+Maintain a position map that associates a block, x, with a leaf node/number l 
+
+x will be in l or in the client stash - loop invariant 
+
+Eviction process:
+Remove the path l from tree and add all the elements to the stash
+Then starting from base of the tree work backwards up the tree and empty elements from stash back into the tree
+
+
+Protocol TLDR:
+
+Position map: find leaf/path leaf leaf
+
+Read the path l into client stash
+Use the block you wanted
+Remap the stash into the tree 
+
+Look up presentations done at Google on Path-ORAM - applications 
+
+
+Problem:
+We dislike the position map and stash and want to minimze its size, otherwise it defeats the purpose of outsourcing storage to the cloud 
+
+
+Recursive approach removes stash improving storage efficency 
+
+
+Similar to moving from arrays to other datastructures, we want to move form simple ORAM to more complex oblivious data DataStructures
+
+
+Oblivious Binary Tree
+Security Requirements for oblivious datastructures(Tree):
+
+1. Do not reveal operands
+    -inherent structure of the tree reveals information about values as they are accessed
+    -need a balanced tree to guarantee the worst case height of the tree - at most O(log n) access time, (specifically 1.44 * log n is maximum worst case height)
+    -searching for value 2 should not reveal the value or the relationship to other data 0_0
+    -pad as we go for the worst case
+2. Do not reveal the operation performed(search, insert, delete should be indistinguishable)
+
+IDEA: store nodes of tree in an ORAM, and then make operations on the ORAM
+    -if we properly pad operands and operations will be indistinguishable
+
+O log^3 N
+Log n height for maximum height(worst case number of accesses need to find value in search), * cost per access(for recursive to outsource more storage) Log^2 n = O(Log ^3 N )
+
+"btw the paper is terribly written" - ORAM paper 0_0
+
+
+
+Better IDEA: Create a Path - ORAM tree and for each node pick at random a leaf, and store in each node the leaf positions of each child
+
+
+AVL Tree as blocks
+Each block will store positon of its left and right child...position map...
+We know that the first access is the Root
+-will find information about left and right child and go form there, but because its oblivious server doesn't know which is left
+-going left and right looks exactly the same to the server
+
+
+Inside each node is information about the other nodes in the Path-ORAM
+
+Once done remap nodes 
+
+Cost per access = O(log^2 N) 
+-TLDR better version of recursive Path-ORAM whilst being less complex
+
+Takes advantage of the fact that the memory access patterns in binary tree traversal are independent of the data...
+    -always starts at root and then go left or right repeatedly until value found
+
+
+
+
+The above technique can be extendedfor many Oblivious Data Structures 
+-Sorted multi-maps, heaps, stacks, queues 
+
+
+Paper in 2020? found way to store heap in ORAM that preserved O(log n) access time!!! Same as base structure
+
+Stacks and queues go from O(1) to O(log N) so less performant
+-not sure about lower bounds yet, there could be more performant solutions
+
+With these constructions can realistically create a programmable solution for things like Djikstras algorithm or more complex programs without leaking any information about their function to the server 
+
+
+
+Paper Presentations from Grad Students:
+
+Oblix Setup
+Wanting to use ORAM with Hardware enclaves(partitioning of hardware into trusted and untrusted sections)
+
+Hardware Enclvave: CPU with a secret key 
+
+-idea is instead of doing fancy math encrypt data in CPU use ORAM
+-spawned confidential computing
+-moving computation to bemore private using hardware enclaves 
+-problem currently is side channel attacks to recover secret keys in computer
+
+Oblix is the first approach that takes Path-ORAM and explains why current Path-ORAM doesn't work for hardware enclaves, and then modifies it to actually work gigachad
+
+
+Introduction:
+
+OBLIX runs ORAM client in an enclave at the server !!!
+
+Reduces the clientside things the client needs to doesn, but also you are pushing way more onto the server and the whole idea of ORAM is to not trust the server!
+-
+
+
+Threat Model:
+-> malicous serve and potential enclave vulnerablities
+-> exposure of memory access pad
+
+
+Need to make stash accesses oblivious now because they are in the server, otherwise side channel attacks could reveal access patterns 
+
+
+Tree stash the number of nodes remaining in left and right?
+-or something like this 
+
+
+
+Standard eviction in Path ORAM handles only external memory
+
+
+O(log^2n + r(number of entries accessing))
+-in contrast to O(log^2n * r )
+
+
+
+High Level Eviction Process in Oblix:
+
+Cache the Path:
+-store the root to leaf path in temp stash
+
+Assign Lowest Feasible Level:
+
+-Linearly scan the stash and assign each block the deepest (lowest feasible) level where it can be placed
+
+Obliviously sort by assigned level
+-sort the stash based on the assgined to group bocks accordingly
+
+Assign buckets
+-determine the specific bucket
+
+Oblivious sort by assigned buckets
+
+
+Write back to server
+
+"Eviction can be parralized at least trivially"
+
+SNOOPY paper:
+
+Scalable efficient and secure oblivous storage system for internet cloud computing.
+-for multiple users
+
+Requests are split into equal aprtiion abtches, that load balencers gather batches of
+subORAms then store data partitions and process all requeests 
+
+
+Loadbalancers are independent for scaling purposes
+
+
+Loadbalancers recieves requests from multiple users!
+
+All requests!!!!!
+
+subORAMs store all of the information in aggreagte
+
+need to partition input database to store all of the data in different subORAms
+    - do so in a way that keeps it oblivious 
+
+Loadbalancers wait set amount of time and then sends requests to subORAMs
+-lets requests pile up in specific windows, then executes requests 
+
+Takewas:
+
+Snoopy is more performant that Obladi and Oblix 
+
+perforance improves for larger datasets 
+
+
+Linear scalability with number of machines and performance
+-adding more macines continues to improve performance even for high numbers of machines 
+
+
+
