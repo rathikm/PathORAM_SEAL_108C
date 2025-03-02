@@ -6,9 +6,9 @@ use crate::posmap::PosMap;
 use crate::stash::Stash;
 use crate::tree::Tree; 
 
-const Z: usize = 4; //bucket size (Z blocks per bucket)
-const L: usize = 3; //tree height
-const N: usize = 8; //block size (N u8s per block)
+pub const Z: usize = 4; //bucket size (Z blocks per bucket)
+pub const L: usize = 3; //tree height
+pub const N: usize = 8; //block size (N u8s per block)
 
 pub struct ORAM {
     pub tree: Tree<L, N, Z>, 
@@ -73,7 +73,7 @@ impl ORAM {
         }        
     }
 
-    pub fn access(&mut self, op: String, address: u64, data_new: [u8; 8]) -> [u8; N]{
+    pub fn access(&mut self, op: String, address: u64, data_new: [u8; N]) -> [u8; N]{
         // Check if the address a is already in the position map. If it is, get the position
         // Otherwise add it to the position map and get that value?
         let x = self.position.get(address).unwrap_or(0);
@@ -97,9 +97,10 @@ impl ORAM {
 
         //eviction procedure
         let mut alt_stash = Stash::new();
-        for i in 0..=L {
+        for i in L..0 {
             let mut buck: Bucket<Z, N> = path_x[i];
             for block in self.stash.storage.iter() {
+                print!("{}\n",block.address);
                 let other_path = self.tree.calc_path(self.position
                                                     .get(block.address).
                                                     unwrap_or(0) as usize);
