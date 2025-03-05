@@ -37,10 +37,10 @@ impl ORAM {
         let B = self.tree.tree.len();
         for i in 0..B {
             let rand_leaf = rng.gen_range(0..self.tree.num_leaves());
-            self.position.set(i as u64, rand_leaf as u64);
+            self.position.set(i as u64, rand_leaf as u64, 0 as u64);
         }
 
-        for (&address, &leaf) in &self.position.map {
+        for (&address, &(leaf, value)) in &self.position.map {
             let path_indices = self.tree.calc_path_indices(leaf as usize);
             let mut inserted = false;
             
@@ -73,15 +73,32 @@ impl ORAM {
         }        
     }
 
+    pub fn access_key_val(&mut self, op: String, address: u64, key: u64, val: &str) -> [u8; N] {
+        let bytes = val.as_bytes();
+        if bytes.len() > N {
+            return [0; N];
+        }
+        let mut arr = [0u8; N];
+        // Copy the bytes into the array; the rest remains as zeros.
+        arr[..bytes.len()].copy_from_slice(bytes);
+        if op == "write" {
+            if let Some(&(leaf, old_key)) = self.position.map.get(&address) {
+                self.position.map.insert(address, (leaf, key));
+            }
+        }
+        
+        self.access(op, address, arr)
+    }
+
     pub fn access(&mut self, op: String, address: u64, data_new: [u8; N]) -> [u8; N]{
         // Check if the address a is already in the position map. If it is, get the position
         // Otherwise add it to the position map and get that value?
-        let x = self.position.get(address).unwrap_or(0);
-        self.position.leaf_rand_assign(address, (1 << L) - 1);
+        let x: (u64, u64) = self.position.get(address).unwrap_or((0, 0));
+        self.position.leaf_rand_assign(address, (1 << L) - 1, x.1);
 
         //contains the buckets in the path from leaf x to root,
         //leaf first
-        let path_x: Vec<Bucket<Z, N>> = self.tree.calc_path(x as usize); 
+        let path_x: Vec<Bucket<Z, N>> = self.tree.calc_path(x.0 as usize); 
         for bucket in path_x.iter().rev() {
             let blocks = self.read_bucket(bucket);
             for block in blocks {
@@ -103,7 +120,7 @@ impl ORAM {
                 print!("{}\n",block.address);
                 let other_path = self.tree.calc_path(self.position
                                                     .get(block.address).
-                                                    unwrap_or(0) as usize);
+                                                    unwrap_or((0, 0)).0 as usize);
                 let other_buck = other_path[i];
                 if buck == other_buck {
                     alt_stash.insert(block.clone());
