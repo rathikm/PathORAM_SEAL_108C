@@ -1,32 +1,29 @@
-use Project::ORAM::ORAM;
+use crate::ORAM::ORAM;
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
+    aead::{Aead, AeadCore},
     Aes256Gcm, Nonce, Key // Or `Aes128Gcm`
 };
+use rand::rngs::OsRng;
 
 pub struct SEAL {
-    pub k,
+    pub k: Key<Aes256Gcm>,
     pub alpha: u64,
 }
 
 impl SEAL {
-    pub fn new() -> Self {
+    pub fn new(alpha: u64) -> Self {
         SEAL {
-            k: 0,
-            alpha, 0
-            encrypted
+            k: Aes256Gcm::generate_key(OsRng),
+            alpha,
         }
     }
 
     pub fn ADJOramInit(&mut self, securityParam: u64,array: Vec<u64>,alpha: u64) {
-        self.alpha = alpha
-        let mew = 2.powf(self.alpha);
-        self.k = Aes256Gcm::generate_key(OsRng);
-
-
+        self.alpha = alpha;
+        let mew = 2.powf(self.alpha as u32) as usize;
         // Intitalizing the arrays based on alpha
         let s_size = mew.clone() / len(array);
-        let S = [[0u8; s_size]; mew];
+        let S = vec![vec![0u8; s_size]; mew];
         let cipher = Aes256Gcm::new(&self.k);
         // 5-7, not sure if there is a better way of doing this.
         //Basically using a block cipher as a PRP which should work?
@@ -40,16 +37,17 @@ impl SEAL {
         let oram_array = initalize_oram_array(mew);
         oram_array
     }
-    fn initialize_oram_array(&mut self,mew: usize,S) -> Vec<ORAM> {
+    fn initialize_oram_array(&mut self,mew: usize,S: Vec<Vec<u8>>) -> Vec<ORAM> {
         let mut oram_array = Vec::with_capacity(mew);
         let cipher = Aes256Gcm::new(&self.k);
         for oram_num in 0..mew {
             let mut oram = ORAM::new();
             oram.init();
             // TODO: Not sure about the indexing here. Might need assistance troubleshooting this.
-            for i in 0..(len(S[oram_num])):
+            for i in 0..(len(S[oram_num])) {
                 let (l, phi) = compute_phi_and_l(i, self.alpha, &cipher);
                 oram.access("write".to_string(), phi+1, S[oram_num][l+1])
+            }
             // TODO: Not sure if this is the correct way we should be initalizing each ORAM. Might need another helper for multiple access.
             oram_array.push(oram);
         }
