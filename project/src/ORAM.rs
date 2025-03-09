@@ -14,6 +14,8 @@ pub struct ORAM {
     pub tree: Tree<L, N, Z>, 
     pub stash: Stash<N>,
     pub position: PosMap,
+    pub key_leaf: HashMap<u64, Vec<u64>>,
+    pub padding_param: u64,
 }
 
 
@@ -24,7 +26,9 @@ impl ORAM {
         ORAM {
             tree: Tree::new(),
             stash: Stash::new(),
-            position: PosMap::new()
+            position: PosMap::new(),
+            key_leaf: HashMap::new(),
+            padding_param: 2,
         }
     }
 
@@ -34,7 +38,7 @@ impl ORAM {
         //multiply by Z to get # of blocks = B
         //0..B-1 is the address space
         let mut rng = rand::thread_rng();
-        let B = self.tree.tree.len();
+        let B = self.tree.tree.len() * Z;
         for i in 0..B {
             let rand_leaf = rng.gen_range(0..self.tree.num_leaves());
             self.position.set(i as u64, rand_leaf as u64, 0 as u64);
@@ -56,6 +60,56 @@ impl ORAM {
                 self.stash.insert(real_block);
             }
         }
+    }
+
+    pub fn addr_space_len(&self) -> u64 {
+        (self.tree.tree.len() * Z) as u64
+    }
+
+    pub fn write_record(&mut self, key: u64, value: &str, address: u64) {
+        self.key_leaf.entry(key).or_insert_with(Vec::new).push(address);
+        let bytes = value.as_bytes();
+        let mut arr = [0u8; N];
+        // Copy the bytes into the array; the rest remains as zeros.
+        arr[..bytes.len()].copy_from_slice(bytes);
+        self.access("write".to_string(), address, arr);
+    }
+
+    pub fn read_records(&mut self, key: u64) -> Vec<String> {
+        // If the key doesn't exist, default to an empty vector.
+        let addresses: Vec<u64> = self.key_leaf.get(&key).cloned().unwrap_or_default();
+        let mut res: Vec<[u8; N]> = Vec::new();
+    
+        for a in addresses {
+            // Assuming self.access returns a [u8; N] array for the given address.
+            res.push(self.access("read".to_string(), a, [0u8; N]));
+        }
+
+        //calculate padding for dummy records
+        let original_len = res.len() as f64;
+        let base: f64 = self.padding_param as f64;
+        let padded_exp: u64 = original_len.log(base).ceil() as u64;
+        let padded: u64 = 1 << padded_exp;
+
+        let dummies = padded - (original_len as u64);
+
+        for i in 0..dummies {
+            res.push([0u8; N]);
+        }
+        
+        res.iter()
+            .map(|arr| {
+                // Remove trailing zeros.
+                let trimmed = arr.iter()
+                    .cloned()
+                    .take_while(|&b| b != 0)
+                    .collect::<Vec<u8>>();
+                // Convert the trimmed bytes to a String (assuming valid UTF-8).
+                std::str::from_utf8(&trimmed)
+                    .expect("Invalid UTF-8")
+                    .to_string()
+            })
+            .collect()
     }
 
     fn read_bucket(&self, bucket: &Bucket<Z, N>) -> [Block<N>; Z]{
