@@ -4,14 +4,14 @@ use Project::ORAM::ORAM;
 use Project::SEAL::SEAL;
 // use rand_core::{SeedableRng, RngCore};
 // use rand_pcg::Pcg64Mcg;
-
+use std::time::{Duration, Instant};
 use permutation_iterator::Permutor;
 use std::collections::HashSet;
 
 fn main() {
     let mut oram = ORAM::new();
     oram.init();
-    print!("Hello World\n");
+    // print!("Hello World\n");
 
     let max: u64 = 10;
     let mut permutor = Permutor::new_with_u64_key(max,32 as u64);
@@ -35,8 +35,12 @@ fn main() {
     let data_vec: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8];
     let data_store = [0,0,0,0,0,0,0,0];
     let mut sealArray = seal.ADJOramInit(data_vec,2);
+    let now = Instant::now();
     seal.ADJOramAccess("write".to_string(), 5,data_store, &mut sealArray);
+    println!("Write-Time: {:?}", now.elapsed());
+    let now2 = Instant::now();
     let dataout = seal.ADJOramAccess("read".to_string(), 5,data_store, &mut sealArray);
+    println!("Read Time: {:?}", now2.elapsed());
     match dataout {
         Ok(data) => println!("Data: {:?}", data),
         Err(e) => println!("Error: {}", e),
