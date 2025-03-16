@@ -1,5 +1,6 @@
 #![allow(warnings)]
 
+use Project::attacks::{build_histogram, query_recovery_attack};
 use Project::ORAM::ORAM;
 use Project::preprocess::read_csv;
 
@@ -8,11 +9,19 @@ fn main() {
     oram.init();
 
     let file_path = "test-oram-data.csv";
-    read_csv(file_path, &mut oram);
-    let names = oram.read_records(20);
-    for name in names {
-        println!("{}", name);
-    }
+    let keys = read_csv(file_path, &mut oram);
+    let names = oram.read_records(15);
+    // for name in names {
+    //     println!("{}", name);
+    // }
+
+    //let keys = vec![10, 15, 20, 25];
+    let hist = build_histogram(&mut oram, keys.clone());
+    println!("{:#?}", hist);
+
+    let accuracy = query_recovery_attack(keys, hist, &mut oram);
+
+    println!("{}", accuracy);
     // Example data
     // let address = 10;
     // let data = [1, 2, 3, 4, 5, 6, 7, 8];

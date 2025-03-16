@@ -7,7 +7,7 @@ use crate::stash::Stash;
 use crate::tree::Tree; 
 
 pub const Z: usize = 4; //bucket size (Z blocks per bucket)
-pub const L: usize = 3; //tree height
+pub const L: usize = 7; //tree height
 pub const N: usize = 8; //block size (N u8s per block)
 
 pub struct ORAM {

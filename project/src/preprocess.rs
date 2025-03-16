@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
 use serde::Deserialize;
@@ -9,22 +10,21 @@ pub struct Record {
     name: String,
 }
 
-pub fn read_csv(file_path: &str, oram: &mut ORAM) -> Result<(), Box<dyn Error>> {
-    // let content = fs::read_to_string(file_path)?;
-    // println!("File content:\n{}", content);
-
-    // Create a CSV reader from the file path.
-    let mut rdr = csv::Reader::from_path(file_path)?;
-    let addr_space = oram.addr_space_len();
+pub fn read_csv(file_path: &str, oram: &mut ORAM) -> HashSet<u64> {
+    // Properly handle the result of creating the CSV reader.
+    let mut rdr = csv::Reader::from_path(file_path)
+        .expect("Failed to open CSV file");
+    
     let mut counter = 0;
-
+    let mut key_set = HashSet::new();
+    
     // Iterate over each deserialized record.
     for result in rdr.deserialize::<Record>() {
-        // Each iteration returns a Result<Record, Error>
         match result {
             Ok(record) => {
-                //dbg!(&record); // Prints record with debug info.
+                // Write the record to ORAM and insert the age into the set.
                 oram.write_record(record.age, &record.name, counter);
+                key_set.insert(record.age);
                 counter += 1;
             },
             Err(e) => {
@@ -32,6 +32,7 @@ pub fn read_csv(file_path: &str, oram: &mut ORAM) -> Result<(), Box<dyn Error>> 
             }
         }
     }
-    Ok(())
+    
+    key_set
 }
 
