@@ -10,13 +10,13 @@ pub struct Record {
     name: String,
 }
 
-pub fn read_csv(file_path: &str, oram: &mut ORAM) -> HashSet<u64> {
+pub fn read_csv(file_path: &str, oram: &mut ORAM) -> Vec<(u64, String)> {
     // Properly handle the result of creating the CSV reader.
     let mut rdr = csv::Reader::from_path(file_path)
         .expect("Failed to open CSV file");
     
     let mut counter = 0;
-    let mut key_set = HashSet::new();
+    let mut records = Vec::new();
     
     // Iterate over each deserialized record.
     for result in rdr.deserialize::<Record>() {
@@ -24,7 +24,7 @@ pub fn read_csv(file_path: &str, oram: &mut ORAM) -> HashSet<u64> {
             Ok(record) => {
                 // Write the record to ORAM and insert the age into the set.
                 oram.write_record(record.age, &record.name, counter);
-                key_set.insert(record.age);
+                records.push((record.age, record.name));
                 counter += 1;
             },
             Err(e) => {
@@ -33,6 +33,7 @@ pub fn read_csv(file_path: &str, oram: &mut ORAM) -> HashSet<u64> {
         }
     }
     
-    key_set
+    records
 }
+
 

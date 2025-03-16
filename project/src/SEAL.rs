@@ -33,42 +33,100 @@ impl SEAL {
     //Initalizes an AdjOram as described in the pseudocode of the SEAL paper. Returns the construction as a Vec of ORAMs.
     // Data is taken in as a vec of u64s, and stored in each ORAM as a padded array of N values(see Path-ORAM implementation)
     // Length of Data, n, should be greater than 2 to the power of alpha, otherwise the function will panic.
-    pub fn ADJOramInit(&mut self, array: Vec<u64>,alpha: u64)-> Vec<ORAM> {
-        self.alpha = alpha;
-        self.maxV = array.len() as u64;
-        let mew = 2_i32.pow(self.alpha as u32) as usize;
-        // Intitalizing the arrays based on alpha
-        println!("Array Len: {}", array.len());
-        let s_size =  array.len() / mew.clone();
-        println!("S Dimensions: {} {}", mew, s_size);
-        let mut S = vec![vec![0u8; s_size]; mew];
-        // 5-7
-        for i in 0..array.len() {
-            let (l, phi) = self.compute_phi_and_l(i, self.alpha);
-            println!("L and Phi: {} {}",l,phi);
-            S[l][phi] = array[i] as u8;
-        }
+    // pub fn ADJOramInit(&mut self, array: Vec<u64>,alpha: u64)-> Vec<ORAM> {
+    //     self.alpha = alpha;
+    //     self.maxV = array.len() as u64;
+    //     let mew = 2_i32.pow(self.alpha as u32) as usize;
+    //     // Intitalizing the arrays based on alpha
+    //     println!("Array Len: {}", array.len());
+    //     let s_size =  array.len() / mew.clone();
+    //     println!("S Dimensions: {} {}", mew, s_size);
+    //     let mut S = vec![vec![0u8; s_size]; mew];
+    //     // 5-7
+    //     for i in 0..array.len() {
+    //         let (l, phi) = self.compute_phi_and_l(i, self.alpha);
+    //         println!("L and Phi: {} {}",l,phi);
+    //         S[l][phi] = array[i] as u8;
+    //     }
 
-        // Loop intalizes S. We now want to store each array in S in it's own ORAM
-        // To do this, initalize EM 
-        let oram_array = self.initialize_oram_array(mew,S);
+    //     // Loop intalizes S. We now want to store each array in S in it's own ORAM
+    //     // To do this, initalize EM 
+    //     let oram_array = self.initialize_oram_array(mew,S);
+    //     oram_array
+    // }
+
+    // In SEAL.rs, change ADJOramInit’s signature:
+    pub fn ADJOramInit(&mut self, records: &[(u64, String)], alpha: u64) -> Vec<ORAM> {
+        self.alpha = alpha;
+        self.maxV = records.len() as u64;
+        let mew = 2_u32.pow(self.alpha as u32) as usize;
+        
+        // Create one ORAM instance per “row” in the SEAL construction.
+        let mut oram_array = Vec::with_capacity(mew);
+        for _ in 0..mew {
+            let mut oram = ORAM::new();
+            oram.init();
+            oram_array.push(oram);
+        }
+        
+        // Iterate over records by reference so they aren’t moved.
+        for (i, (key, value)) in records.iter().enumerate() {
+            let (l, phi) = self.compute_phi_and_l(i, self.alpha);
+            // Use phi as the address (or modify as needed)
+            oram_array[l].write_record(*key, value, phi as u64);
+        }
+        
         oram_array
     }
     // Function as described in the paper. Result on success is an array of length N. So if value nitially stored was 5, will return [5,0,0,0,0,0,0,0]
-    pub fn ADJOramAccess(&mut self, op: String, i: u64, vSubi: [u8; N],  EM: &mut Vec<ORAM>) -> Result<[u8; N], SEALError> {
-        if let maxV = self.maxV {
-            if i > maxV {
-                return Err(SEALError::IndexOutOfBounds);
-            }
-        } else {
+    // pub fn ADJOramAccess(&mut self, op: String, i: u64, vSubi: [u8; N],  EM: &mut Vec<ORAM>) -> Result<[u8; N], SEALError> {
+    //     if let maxV = self.maxV {
+    //         if i > maxV {
+    //             return Err(SEALError::IndexOutOfBounds);
+    //         }
+    //     } else {
+    //         return Err(SEALError::IndexOutOfBounds);
+    //     }
+
+    //     let mew = 2_i32.pow(self.alpha as u32) as usize;
+    //     let (l, phi) = self.compute_phi_and_l(i as usize, self.alpha);
+    //     let result = EM[l].access(op,(phi).try_into().unwrap(),vSubi);
+    //     Ok(result)
+    // }
+
+    pub fn ADJOramAccess(&mut self, op: String, i: u64, vSubi: [u8; N], EM: &mut Vec<ORAM>) -> Result<[u8; N], SEALError> {
+        if i >= self.maxV {
             return Err(SEALError::IndexOutOfBounds);
         }
-
-        let mew = 2_i32.pow(self.alpha as u32) as usize;
+        // Compute destination based on record index
         let (l, phi) = self.compute_phi_and_l(i as usize, self.alpha);
-        let result = EM[l].access(op,(phi).try_into().unwrap(),vSubi);
-        Ok(result)
+        
+        if op == "write" {
+            // Convert the [u8; N] input into a string (assumes valid UTF‑8)
+            let value_str = std::str::from_utf8(&vSubi).unwrap_or("").to_string();
+            // For updating, you might need to know the record’s original key.
+            // If you don’t maintain a separate mapping, you can use phi as a temporary key.
+            EM[l].write_record(phi as u64, &value_str, phi as u64);
+            Ok(vSubi)
+        } else if op == "read" {
+            // Read all records under key φ (or, if available, use the stored original key)
+            let records = EM[l].read_records(phi as u64);
+            if records.is_empty() {
+                return Err(SEALError::IndexOutOfBounds);
+            }
+            // Here we simply take the first record.
+            let record_str = &records[0];
+            let bytes = record_str.as_bytes();
+            let mut arr = [0u8; N];
+            let copy_len = if bytes.len() > N { N } else { bytes.len() };
+            arr[..copy_len].copy_from_slice(&bytes[..copy_len]);
+            Ok(arr)
+        } else {
+            Err(SEALError::InvalidOperation)
+        }
     }
+    
+
     // Given S, the array as described in the paper pseudocode, and mew, loop over S and add data to the corresponding ORAM.
     // This is done by creating an ORAM(outer loop) and then in the inner loop iterating over the corresponding row of S and storing each value there in that oram using oram.access
     // This is done iterativley because the permutation of the data(using compute_phi_and_l) has already been done and is reflected in the datas placement in S
@@ -128,12 +186,15 @@ impl SEAL {
 #[derive(Debug)]
 pub enum SEALError {
     IndexOutOfBounds,
+    InvalidOperation,  // Added for unsupported op values
 }
+
 
 impl fmt::Display for SEALError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SEALError::IndexOutOfBounds => write!(f, "Index out of bounds"),
+            SEALError::InvalidOperation => write!(f, "Invalid op")
         }
     }
 }
