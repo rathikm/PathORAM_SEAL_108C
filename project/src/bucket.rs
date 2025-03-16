@@ -21,6 +21,7 @@ impl <const N: usize> Block<N> {
     pub fn set_data(&mut self, data: [u8; N]) {
         self.data = data;
     }
+
 }
 
 #[derive(Clone, Debug, Copy, PartialEq)]
