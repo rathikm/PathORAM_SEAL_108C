@@ -15,7 +15,7 @@ fn main() {
     let mut oram = ORAM::new();
     oram.init();
 
-    let file_path = "test-oram-data.csv";
+    let file_path = "generated.csv";
     let records = read_csv(file_path, &mut oram);
     let mut keys = HashSet::new();
     for record in &records {
@@ -29,8 +29,13 @@ fn main() {
     //let keys = vec![10, 15, 20, 25];
     let hist = build_histogram(&mut oram, keys.clone());
     // println!("{:#?}", hist);
+    let mut accuracy: f64 = 0.0;
+    for i in 0..100 {
+        accuracy = accuracy + query_recovery_attack(keys.clone(), hist.clone(), &mut oram);
+    }
+    accuracy = accuracy / 100.0;
 
-    let accuracy = query_recovery_attack(keys, hist, &mut oram);
+    
 
     println!("{}", accuracy);
   

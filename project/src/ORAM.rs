@@ -7,7 +7,7 @@ use crate::stash::Stash;
 use crate::tree::Tree; 
 
 pub const Z: usize = 4; //bucket size (Z blocks per bucket)
-pub const L: usize = 7; //tree height
+pub const L: usize = 10; //tree height
 pub const N: usize = 8; //block size (N u8s per block)
 
 pub struct ORAM {
@@ -89,7 +89,7 @@ impl ORAM {
         let original_len = res.len() as f64;
         let base: f64 = self.padding_param as f64;
         let padded_exp: u64 = original_len.log(base).ceil() as u64;
-        let padded: u64 = 1 << padded_exp;
+        let padded: u64 = (base as u64).pow(padded_exp as u32);
 
         let dummies = padded - (original_len as u64);
 
