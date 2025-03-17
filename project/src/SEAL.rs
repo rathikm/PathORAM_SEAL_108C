@@ -111,11 +111,13 @@ impl SEAL {
         } else if op == "read" {
             // Read all records under key φ (or, if available, use the stored original key)
             let records = EM[l].read_records(phi as u64);
+            // println!("{:?}", records);
             if records.is_empty() {
                 return Err(SEALError::IndexOutOfBounds);
             }
             // Here we simply take the first record.
             let record_str = &records[0];
+            // println!("{:?}",record_str);
             let bytes = record_str.as_bytes();
             let mut arr = [0u8; N];
             let copy_len = if bytes.len() > N { N } else { bytes.len() };
