@@ -10,13 +10,16 @@ use std::fmt;
 use rand::Rng;
 use permutation_iterator::Permutor;
 use std::collections::HashSet;
-
-
+use std::time::{Duration, Instant};
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+type HmacSha256 = Hmac<Sha256>;
 
 pub struct SEAL {
     pub k: u64,
     pub alpha: u64,
     pub maxV: u64,
+    pub key: [u8; 32]
 }
 
 impl SEAL {
@@ -24,10 +27,13 @@ impl SEAL {
     // Instantiate a new SEAL construction. Takes in the security parameter alpha. 
     pub fn new(alpha: u64) -> Self {
         let mut rng = rand::thread_rng();
+        let mut key = [0u8; 32]; // 256-bit key
+        rng.fill(&mut key);
         SEAL {
             k: rng.gen(),
             alpha,
             maxV: 0,
+            key: key,
         }
     }
     //Initalizes an AdjOram as described in the pseudocode of the SEAL paper. Returns the construction as a Vec of ORAMs.
@@ -60,7 +66,6 @@ impl SEAL {
         self.alpha = alpha;
         self.maxV = records.len() as u64;
         let mew = 2_u32.pow(self.alpha as u32) as usize;
-        
         // Create one ORAM instance per “row” in the SEAL construction.
         let mut oram_array = Vec::with_capacity(mew);
         for _ in 0..mew {
@@ -99,7 +104,8 @@ impl SEAL {
             return Err(SEALError::IndexOutOfBounds);
         }
         // Compute destination based on record index
-        let (l, phi) = self.compute_phi_and_l(i as usize, self.alpha);
+        let alpha = self.alpha;
+        let (l, phi) = self.compute_phi_and_l(i as usize, alpha);
         
         if op == "write" {
             // Convert the [u8; N] input into a string (assumes valid UTF‑8)
@@ -152,29 +158,51 @@ impl SEAL {
     }
     // Does the calculation of l and phi given alpha and index of value in the array.
     // Uses Permutor based on lenth of data
-    fn compute_phi_and_l(&self, i: usize, alpha: u64) -> (usize, usize) {
+    fn compute_phi_and_l(&mut self, i: usize, alpha: u64) -> (usize, usize) {
         // let nonce = Aes256Gcm::generate_nonce(&mut OsRng); // 96-bits; unique per message
         // println!("{}", i);
         // let mut block = (i as u64).to_le_bytes().to_vec();
         // println!("{:?}", block);
         // cipher.encrypt_in_place(&nonce, b"", &mut block).expect("encryption failure!");
         // let array: [u8; 8] = truncate_to_8_elements(block);
-        let mut p = Permutor::new_with_u64_key(self.maxV, self.k);
 
 
-        let num_bits =  64 - (self.maxV-1).leading_zeros() as u64;
-        // println!("{}", num_bits);
-        let mask = (1 << num_bits) -1;
-        // println!("{}", mask);
-        let prp_output = p.nth(i).expect("Failed to Permute") & mask;
+        // let num_bits =  64 - (self.maxV-1).leading_zeros() as u64;
+        // // println!("{}", num_bits);
+        // let mask = (1 << num_bits) -1;
+        // // println!("{}", mask);
+        // let inst = Instant::now();
+        // let prp_output = self.p.nth(i).expect("Failed to Permute") & mask;
+        // let result = inst.elapsed();
+        // println!("PRP: {:?}", result);
+        // // println!("PRP Output: {:?}", prp_output);
 
-        // println!("PRP Output: {:?}", prp_output);
+        // // let num_bits = 64 - prp_output.leading_zeros() as u64;
 
-        // let num_bits = 64 - prp_output.leading_zeros() as u64;
+        // let l = (prp_output >> (num_bits - alpha)) as usize;
+        // let phi = (prp_output & ((1 << (num_bits- alpha)) - 1)) as usize;
+        // (l, phi)
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(&self.key).expect("HMAC can take a key of any size");
+    mac.update(&(i as u64).to_le_bytes());
 
-        let l = (prp_output >> (num_bits - alpha)) as usize;
-        let phi = (prp_output & ((1 << (num_bits- alpha)) - 1)) as usize;
-        (l, phi)
+    // Generate the PRF output
+    let prf_output = mac.finalize().into_bytes();
+
+    // Convert the first 8 bytes of the PRF output into a u64
+    let prp_output = u64::from_le_bytes(prf_output[..8].try_into().unwrap());
+
+    // Calculate the number of bits required to represent `maxV`
+    let num_bits = 64 - (self.maxV - 1).leading_zeros() as u64;
+
+    // Mask the PRF output to fit within the range of `maxV`
+    let mask = (1 << num_bits) - 1;
+    let prp_output = prp_output & mask;
+
+    // Compute `l` and `phi` from the PRF output
+    let l = (prp_output >> (num_bits - alpha)) as usize;
+    let phi = (prp_output & ((1 << (num_bits - alpha)) - 1)) as usize;
+
+    (l, phi)
     }
     // Helper function to make data work with Path-ORAM
     fn pad_to_length(mut data: Vec<u8>, length: usize) -> [u8; N] {
