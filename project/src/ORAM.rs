@@ -79,10 +79,13 @@ impl ORAM {
         // If the key doesn't exist, default to an empty vector.
         let addresses: Vec<u64> = self.key_leaf.get(&key).cloned().unwrap_or_default();
         let mut res: Vec<[u8; N]> = Vec::new();
-    
+        
+        // Normally would retrieve all accesses, but for testing treating read_records as an abstraction that just gets first one.
+        // Otherwise its multiple accesses which makes it much slower than a write on one specific location.
         for a in addresses {
             // Assuming self.access returns a [u8; N] array for the given address.
             res.push(self.access("read".to_string(), a, [0u8; N]));
+            break;
         }
 
         //calculate padding for dummy records

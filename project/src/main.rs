@@ -12,7 +12,7 @@ use permutation_iterator::Permutor;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
-const alpha: u64 = 11;
+const alpha: u64 = 0;
 
 fn main() {
     let mut oram = ORAM::new();
