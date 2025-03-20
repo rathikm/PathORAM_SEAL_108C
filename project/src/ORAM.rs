@@ -85,7 +85,6 @@ impl ORAM {
         for a in addresses {
             // Assuming self.access returns a [u8; N] array for the given address.
             res.push(self.access("read".to_string(), a, [0u8; N]));
-            break;
         }
 
         //calculate padding for dummy records
@@ -113,6 +112,12 @@ impl ORAM {
                     .to_string()
             })
             .collect()
+    }
+
+    pub fn read_record(&mut self, i: usize, key: u64) -> [u8; N] {
+        let addresses: Vec<u64> = self.key_leaf.get(&key).cloned().unwrap_or_default();
+        let res: [u8; N] = self.access("read".to_string(), addresses[i], [0u8; N]);
+        res
     }
 
     fn read_bucket(&self, bucket: &Bucket<Z, N>) -> [Block<N>; Z]{

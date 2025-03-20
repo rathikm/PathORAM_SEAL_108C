@@ -103,7 +103,7 @@ fn main() {
         // println!("{}",key);
         // Timing ORAM read
         let start = Instant::now();
-        let _ = oram.read_records(*key);
+        let _ = oram.read_record(0,*key);
         let duration_oram_read = start.elapsed();
         total_oram_read += duration_oram_read;
         // println!("Alive");
@@ -125,10 +125,10 @@ fn main() {
         // println!("Alive3");
         csv_data.push((
             key,
-            duration_oram_read.as_nanos(),
-            duration_seal_read.as_nanos(),
-            duration_oram_write.as_nanos(),
-            duration_seal_write.as_nanos(),
+            duration_oram_read.as_micros(),
+            duration_seal_read.as_micros(),
+            duration_oram_write.as_micros(),
+            duration_seal_write.as_micros(),
         ));
         println!(
             "Key: {}, ORAM Read: {:?}, SEAL Read: {:?}, ORAM Write: {:?}, SEAL Write: {:?}",
@@ -146,7 +146,7 @@ fn main() {
         avg_oram_read, avg_seal_read, avg_oram_write, avg_seal_write
     );
     let mut wtr = csv::Writer::from_path("timing_data.csv").expect("Failed to create CSV writer");
-    wtr.write_record(&["Key", "ORAM Read (ns)", "SEAL Read (ns)", "ORAM Write (ns)", "SEAL Write (ns)"])
+    wtr.write_record(&["Key", "ORAM Read (μs)", "SEAL Read (μs)", "ORAM Write (μs)", "SEAL Write (μs)"])
         .expect("Failed to write CSV header");
 
     for (key, oram_read, seal_read, oram_write, seal_write) in csv_data {
@@ -162,10 +162,10 @@ fn main() {
 
     wtr.write_record(&[
         "Average".to_string(),
-        avg_oram_read.as_nanos().to_string(),
-        avg_seal_read.as_nanos().to_string(),
-        avg_oram_write.as_nanos().to_string(),
-        avg_seal_write.as_nanos().to_string(),
+        avg_oram_read.as_micros().to_string(),
+        avg_seal_read.as_micros().to_string(),
+        avg_oram_write.as_micros().to_string(),
+        avg_seal_write.as_micros().to_string(),
     ])
     .expect("Failed to write CSV average record");
 
