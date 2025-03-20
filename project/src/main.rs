@@ -17,6 +17,30 @@ const alpha: u64 = 11;
 fn main() {
     let mut oram = ORAM::new();
     oram.init();
+    //before doing key-value store, testing oram read/write directly
+    let mut total_oram_read = Duration::new(0, 0);
+    let mut total_oram_write = Duration::new(0, 0);
+    for i in 0..100 {
+        let mut start = Instant::now();
+        let _ = oram.access("write".to_string(), 1, [0; 8]);
+        let duration_oram_write = start.elapsed();
+        total_oram_write += duration_oram_write;
+        start = Instant::now();
+        _ = oram.access("read".to_string(), 1, [0; 8]);
+        let duration_oram_read = start.elapsed();
+        total_oram_read += duration_oram_read;
+    }
+
+
+    let avg_oram_read = total_oram_read / 100;
+    let avg_oram_write = total_oram_write / 100;
+
+    println!(
+        "Average ORAM Read: {:?}, Average ORAM Write: {:?}",
+        avg_oram_read, avg_oram_write
+    );
+
+   
     let file_path = "generated.csv";
     let records = read_csv(file_path, &mut oram);
     let mut keys = HashSet::new();
